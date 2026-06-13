@@ -1,13 +1,57 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
-generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-}
-
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  products     UserProduct[]
+
+  @@map("users")
+}
+
+model Product {
+  id           String         @id @default(uuid())
+  url          String         @unique
+  title        String
+  imageUrl     String?        @map("image_url")
+  currentPrice Float          @map("current_price")
+  storeName    String         @map("store_name")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  users        UserProduct[]
+  priceHistory PriceHistory[]
+
+  @@map("products")
+}
+
+model UserProduct {
+  userId      String   @map("user_id")
+  productId   String   @map("product_id")
+  targetPrice Float    @map("target_price")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId]) // Clave primaria compuesta
+  @@map("user_products")
+}
+
+model PriceHistory {
+  id         String   @id @default(uuid())
+  productId  String   @map("product_id")
+  price      Float
+  checkedAt  DateTime @default(now()) @map("checked_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, checkedAt]) // Índice para optimizar los gráficos de React
+  @@map("price_history")
 }
